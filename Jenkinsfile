@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'my-app'               // Docker image name
-        DOCKER_TAG = 'latest-v014'            // Docker tag
-        DOCKER_HUB_REPO = 'royjith/pikube'   // Docker Hub repository
+        DOCKER_TAG = 'latest-v1'            // Docker tag
+        DOCKER_HUB_REPO = 'divijeshhub/pikube'   // Docker Hub repository
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub'  // Docker Hub credentials ID
         DEPLOYMENT_NAME = 'pipeline-deployment'
         NAMESPACE = 'default'  // Kubernetes namespace to deploy to
@@ -16,7 +16,7 @@ pipeline {
             steps {
                 echo 'Checking out code from Git...'
                 // Checkout the code from the 'master' branch
-                git branch: 'main', credentialsId: 'dockerhub', url: 'https://github.com/Royjith/demo.git'
+                git branch: 'main', credentialsId: 'dockerhub', url: 'https://github.com/DivijeshVarma/pipeline.git'
             }
         }
 
@@ -24,7 +24,7 @@ pipeline {
             steps {
                 script {
                     // Set default tag to 'latest' if DOCKER_TAG is not defined
-                    def tag = "${DOCKER_TAG ?: 'latest-v014'}"
+                    def tag = "${DOCKER_TAG ?: 'latest-v1'}"
                     echo "Building Docker image with tag: ${tag}..."
                     // Build the Docker image with the determined tag
                     def buildResult = sh(script: "docker build -t ${DOCKER_HUB_REPO}:${tag} .", returnStatus: true)
