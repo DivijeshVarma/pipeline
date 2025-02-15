@@ -114,7 +114,7 @@ pipeline {
                                     # Run the Docker container
                                     docker run -d --name ${DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${DOCKER_TAG}
                                 EOF
-                            """
+			       """
                         } catch (Exception e) {
                             error "Docker deployment to EC2 failed: ${e.message}"
                         }
@@ -122,7 +122,7 @@ pipeline {
                 }
             }
         }
- 
+ }
 
     post {
         always {
