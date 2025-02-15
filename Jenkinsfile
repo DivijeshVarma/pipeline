@@ -8,7 +8,7 @@ pipeline {
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub'
         DEPLOYMENT_NAME = 'pipeline-deployment'
         NAMESPACE = 'default'
-        TERRAFORM_DIR = '.'  // Location where Terraform files are located
+        TERRAFORM_DIR = '.'  // Path to the directory containing your Terraform files
         EC2_INSTANCE_IP = ''  // Placeholder for the EC2 instance public IP
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
     }
@@ -76,12 +76,12 @@ pipeline {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-id']]) {
                         dir(TERRAFORM_DIR) {
                             sh 'terraform init'
-                            sh 'terraform apply -auto-approve'
+                            sh 'terraform apply -auto-approve'  // Apply the Terraform configuration
 
-                            // Capture the EC2 public IP from Terraform output
+                            // Automatically capture EC2 public IP from Terraform output
                             def ec2Ip = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
 
-                            // Store EC2 IP in the environment variable for use in later steps
+                            // Set the EC2 public IP to an environment variable
                             env.EC2_INSTANCE_IP = ec2Ip
                             echo "EC2 Public IP: ${env.EC2_INSTANCE_IP}"
                         }
@@ -96,7 +96,7 @@ pipeline {
                 script {
                     echo "Deploying Docker container to EC2 instance: ${env.EC2_INSTANCE_IP}"
 
-                    // Using sshagent to handle SSH credentials securely
+                    // Using sshagent to securely handle SSH credentials for EC2 instance
                     sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                         try {
                             // SSH into EC2 instance and deploy Docker image
@@ -130,3 +130,4 @@ pipeline {
         }
     }
 }
+
