@@ -9,7 +9,7 @@ pipeline {
         DEPLOYMENT_NAME = 'pipeline-deployment'
         NAMESPACE = 'default'
         TERRAFORM_DIR = '.'  // Path to the directory containing your Terraform files
-        EC2_INSTANCE_IP = ''  // Placeholder for the EC2 instance public IP
+        EC2_INSTANCE_IP = ''  // Placeholder for the EC2 instance public IP (set dynamically in the pipeline)
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
     }
 
@@ -75,15 +75,22 @@ pipeline {
 
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-id']]) {
                         dir(TERRAFORM_DIR) {
+                            // Initialize Terraform and apply the configuration
                             sh 'terraform init'
                             sh 'terraform apply -auto-approve'  // Apply the Terraform configuration
 
-                            // Automatically capture EC2 public IP from Terraform output
+                            // Add debugging logs to check the output command
+                            echo "Fetching Terraform output..."
                             def ec2Ip = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
+                            echo "Terraform output ec2_public_ip: ${ec2Ip}"
 
-                            // Set the EC2 public IP to an environment variable
+                            // Check if we correctly received the IP
+                            if (ec2Ip == '') {
+                                error 'Terraform output is empty, no public IP found.'
+                            }
+
+                            // Set the EC2 public IP globally by updating the environment variable
                             env.EC2_INSTANCE_IP = ec2Ip
-                            echo "EC2 Public IP: ${env.EC2_INSTANCE_IP}"
                         }
                     }
                 }
@@ -95,6 +102,11 @@ pipeline {
                 input message: 'Approve Docker Deployment to EC2?', ok: 'Deploy'
                 script {
                     echo "Deploying Docker container to EC2 instance: ${env.EC2_INSTANCE_IP}"
+
+                    // Ensure that env.EC2_INSTANCE_IP is set
+                    if (env.EC2_INSTANCE_IP == '') {
+                        error 'EC2 instance IP is not set!'
+                    }
 
                     // Using sshagent to securely handle SSH credentials for EC2 instance
                     sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
@@ -130,5 +142,4 @@ pipeline {
         }
     }
 }
-
 
