@@ -78,19 +78,15 @@ pipeline {
                             sh 'terraform init'
                             sh 'terraform apply -auto-approve'  // Apply the Terraform configuration
 
-                            // Add debugging logs to check the output command
-                            echo "Fetching Terraform output..."
+                            // Fetch the EC2 public IP from Terraform output
                             def ec2Ip = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
                             echo "Terraform output ec2_public_ip: ${ec2Ip}"
 
-                            // Check if we correctly received the IP
+                            // Store the IP in the environment variable for use in subsequent stages
                             if (ec2Ip == '') {
                                 error 'Terraform output is empty, no public IP found.'
                             }
-
-                            // Directly use ec2Ip in the next stage (no need to set as env variable)
-                            // Deploy the Docker image to EC2 instance
-                            echo "Deploying Docker container to EC2 instance: ${ec2Ip}"
+                            env.EC2_INSTANCE_IP = ec2Ip
                         }
                     }
                 }
@@ -101,15 +97,14 @@ pipeline {
             steps {
                 input message: 'Approve Docker Deployment to EC2?', ok: 'Deploy'
                 script {
-                    // Ensure that ec2Ip is set (this was fetched in the previous stage)
-                    echo "Deploying Docker container to EC2 instance: ${ec2Ip}"
+                    echo "Deploying Docker container to EC2 instance: ${env.EC2_INSTANCE_IP}"
 
                     // Using sshagent to securely handle SSH credentials for EC2 instance
                     sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                         try {
                             // SSH into EC2 instance and deploy Docker image
                             sh """
-                                ssh -o StrictHostKeyChecking=no ec2-user@${ec2Ip} << 'EOF'
+                                ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} << 'EOF'
                                     # Pull the Docker image from DockerHub
                                     docker pull ${DOCKER_HUB_REPO}:${DOCKER_TAG}
 
