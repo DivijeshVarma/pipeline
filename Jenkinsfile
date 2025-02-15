@@ -105,6 +105,9 @@ pipeline {
                             // SSH into EC2 instance and deploy Docker image
                             sh """
                                 ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} << 'EOF'
+				    # Ensure Docker is installed and running
+                                    sudo systemctl start docker
+                                    sudo systemctl enable docker
                                     # Pull the Docker image from DockerHub
                                     docker pull ${DOCKER_HUB_REPO}:${DOCKER_TAG}
 
