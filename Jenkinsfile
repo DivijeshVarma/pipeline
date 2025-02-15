@@ -9,7 +9,6 @@ pipeline {
         DEPLOYMENT_NAME = 'pipeline-deployment'
         NAMESPACE = 'default'
         TERRAFORM_DIR = '.'  // Path to the directory containing your Terraform files
-        EC2_INSTANCE_IP = ''  // Placeholder for the EC2 instance public IP (set dynamically in the pipeline)
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
     }
 
@@ -89,8 +88,9 @@ pipeline {
                                 error 'Terraform output is empty, no public IP found.'
                             }
 
-                            // Set the EC2 public IP globally by updating the environment variable
-                            env.EC2_INSTANCE_IP = ec2Ip
+                            // Directly use ec2Ip in the next stage (no need to set as env variable)
+                            // Deploy the Docker image to EC2 instance
+                            echo "Deploying Docker container to EC2 instance: ${ec2Ip}"
                         }
                     }
                 }
@@ -101,19 +101,15 @@ pipeline {
             steps {
                 input message: 'Approve Docker Deployment to EC2?', ok: 'Deploy'
                 script {
-                    echo "Deploying Docker container to EC2 instance: ${env.EC2_INSTANCE_IP}"
-
-                    // Ensure that env.EC2_INSTANCE_IP is set
-                    if (env.EC2_INSTANCE_IP == '') {
-                        error 'EC2 instance IP is not set!'
-                    }
+                    // Ensure that ec2Ip is set (this was fetched in the previous stage)
+                    echo "Deploying Docker container to EC2 instance: ${ec2Ip}"
 
                     // Using sshagent to securely handle SSH credentials for EC2 instance
                     sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                         try {
                             // SSH into EC2 instance and deploy Docker image
                             sh """
-                                ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} << 'EOF'
+                                ssh -o StrictHostKeyChecking=no ec2-user@${ec2Ip} << 'EOF'
                                     # Pull the Docker image from DockerHub
                                     docker pull ${DOCKER_HUB_REPO}:${DOCKER_TAG}
 
