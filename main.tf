@@ -144,8 +144,8 @@ resource "aws_vpc_security_group_egress_rule" "allow_egress_to_anywhere" {
   security_group_id = aws_security_group.open_sg.id
   description       = "Allow all egress traffic"
   cidr_ipv4         = "0.0.0.0/0"
-  #from_port         = 0
-  #to_port           = 0
+  from_port         = 0
+  to_port           = 0
   ip_protocol       = -1
 
   tags = {
@@ -158,7 +158,7 @@ resource "aws_instance" "web" {
   ami                         = "ami-0c50b6f7dc3701ddd" # Amazon Linux 2023 // ap-south-1
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.open_sg.id]
-  key_name                    = "docker"
+  key_name                    = "jenkins"
   subnet_id                   = aws_subnet.public_subnet.id
   associate_public_ip_address = true # Automatically associates a public IP address
 
@@ -173,7 +173,7 @@ resource "aws_instance" "web" {
               newgrp docker
             EOF
 
-  # Adding 20GB of EBS storage
+  # Adding 10GB of EBS storage
   root_block_device {
     volume_size           = 10    # Size in GB
     volume_type           = "gp2" # General Purpose SSD
