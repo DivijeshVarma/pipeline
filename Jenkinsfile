@@ -16,7 +16,7 @@ pipeline {
             steps {
                 echo 'Checking out code from Git...'
                 // Checkout the code from the 'master' branch
-                git branch: 'main', credentialsId: 'dockerhub', url: 'https://github.com/DivijeshVarma/pipeline.git'
+                git branch: 'main', url: 'https://github.com/DivijeshVarma/pipeline.git'
             }
         }
 
