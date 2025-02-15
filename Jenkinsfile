@@ -8,9 +8,9 @@ pipeline {
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub'
         DEPLOYMENT_NAME = 'pipeline-deployment'
         NAMESPACE = 'default'
-        TERRAFORM_DIR = '.'
-        EC2_INSTANCE_IP = ''  // To be populated dynamically after Terraform
-        SSH_CREDENTIALS_ID = 'ec2-ssh-key' // The ID of your SSH credentials stored in Jenkins
+        TERRAFORM_DIR = '.'  // Location where Terraform files are located
+        EC2_INSTANCE_IP = ''  // Placeholder for the EC2 instance public IP
+        SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
     }
 
     stages {
@@ -74,13 +74,16 @@ pipeline {
                     echo 'Running Terraform to launch EC2 instance and set up Docker...'
 
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-id']]) {
-                        dir('.') {
+                        dir(TERRAFORM_DIR) {
                             sh 'terraform init'
                             sh 'terraform apply -auto-approve'
 
                             // Capture the EC2 public IP from Terraform output
                             def ec2Ip = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
+
+                            // Store EC2 IP in the environment variable for use in later steps
                             env.EC2_INSTANCE_IP = ec2Ip
+                            echo "EC2 Public IP: ${env.EC2_INSTANCE_IP}"
                         }
                     }
                 }
