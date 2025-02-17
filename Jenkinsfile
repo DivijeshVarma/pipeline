@@ -2,9 +2,11 @@ pipeline {
     agent { label 'node-1' }
 
     environment {
+        DOCKER_IMAGE = 'my-app'
+        DOCKER_TAG = 'latest-v1'
         DOCKER_HUB_REPO = 'divijeshhub/pikube'
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub'
-        DEPLOYMENT_NAME_PREFIX = 'pipeline-deployment'
+        DEPLOYMENT_NAME = 'pipeline-deployment'
         NAMESPACE = 'default'
         TERRAFORM_DIR = '.'  // Path to the directory containing your Terraform files
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
@@ -13,16 +15,16 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo "Checking out code for branch ${env.BRANCH_NAME}..."
-                git branch: "${env.BRANCH_NAME}", url: 'https://github.com/DivijeshVarma/pipeline.git'
+                echo 'Checking out code from Git...'
+                git branch: 'main', url: 'https://github.com/DivijeshVarma/pipeline.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    def tag = "${env.BRANCH_NAME ?: 'latest-v1'}"
-                    echo "Building Docker image for branch ${env.BRANCH_NAME} with tag: ${tag}..."
+                    def tag = "${DOCKER_TAG ?: 'latest-v1'}"
+                    echo "Building Docker image with tag: ${tag}..."
                     def buildResult = sh(script: "docker build -t ${DOCKER_HUB_REPO}:${tag} .", returnStatus: true)
 
                     if (buildResult != 0) {
@@ -36,7 +38,7 @@ pipeline {
             steps {
                 script {
                     echo 'Running Trivy security scan on the Docker image...'
-                    def scanResult = sh(script: "trivy image ${DOCKER_HUB_REPO}:${env.BRANCH_NAME}", returnStatus: true)
+                    def scanResult = sh(script: "trivy image ${DOCKER_HUB_REPO}:${DOCKER_TAG}", returnStatus: true)
 
                     if (scanResult != 0) {
                         error 'Trivy scan found vulnerabilities in the Docker image!'
@@ -49,9 +51,9 @@ pipeline {
 
         stage('Push Image to DockerHub') {
             steps {
-                input message: 'Approve Docker Image Push?', ok: 'Push'
+                input message: 'Approve Deployment?', ok: 'Deploy'
                 script {
-                    echo "Pushing Docker image for branch ${env.BRANCH_NAME} to DockerHub..."
+                    echo 'Pushing Docker image to DockerHub...'
 
                     withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh '''
@@ -59,7 +61,7 @@ pipeline {
                         '''
                     }
 
-                    sh "docker push ${DOCKER_HUB_REPO}:${env.BRANCH_NAME}"
+                    sh "docker push ${DOCKER_HUB_REPO}:${DOCKER_TAG}"
                 }
             }
         }
@@ -95,8 +97,7 @@ pipeline {
             steps {
                 input message: 'Approve Docker Deployment to EC2?', ok: 'Deploy'
                 script {
-                    def containerName = "${DEPLOYMENT_NAME_PREFIX}-${env.BRANCH_NAME}"
-                    echo "Deploying Docker container for branch ${env.BRANCH_NAME} to EC2 instance: ${env.EC2_INSTANCE_IP}"
+                    echo "Deploying Docker container to EC2 instance: ${env.EC2_INSTANCE_IP}"
 
                     // Using sshagent to securely handle SSH credentials for EC2 instance
                     sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
@@ -104,11 +105,11 @@ pipeline {
                             // SSH into EC2 instance and deploy Docker image
                             sh """
                                 ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} \
-                                    'sudo systemctl start docker && \
+			            'sudo systemctl start docker && \
                                      sudo systemctl enable docker && \
-                                     docker pull ${DOCKER_HUB_REPO}:${env.BRANCH_NAME} && \
-                                     sudo docker run -d --name ${DEPLOYMENT_NAME} -p 8501:8501 ${DOCKER_HUB_REPO}:${DOCKER_TAG}'  
-                            """
+                                     docker pull ${DOCKER_HUB_REPO}:${DOCKER_TAG} && \
+                                     sudo docker run -d --name ${DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${DOCKER_TAG}' 	    
+			    """
                         } catch (Exception e) {
                             error "Docker deployment to EC2 failed: ${e.message}"
                         }
@@ -116,17 +117,17 @@ pipeline {
                 }
             }
         }
-    }
+ }
 
     post {
         always {
             cleanWs()
         }
         success {
-            echo "Pipeline for branch ${env.BRANCH_NAME} executed successfully!"
+            echo 'Pipeline executed successfully!'
         }
         failure {
-            echo "Pipeline for branch ${env.BRANCH_NAME} failed."
+            echo 'Pipeline failed.'
         }
     }
 }
