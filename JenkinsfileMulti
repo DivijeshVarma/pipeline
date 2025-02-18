@@ -114,7 +114,13 @@ pipeline {
                             // SSH into EC2 instance and deploy the container
                             sh """
                                 ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} \
-                                    'sudo systemctl start docker && \
+                                    'sudo yum update -y
+                                     sudo yum install docker -y
+                                     sudo systemctl enable --now docker
+                                     sudo groupadd docker
+                                     sudo usermod -a -G docker ec2-user
+                                     newgrp docker
+				     sudo systemctl start docker && \
                                      sudo systemctl enable docker && \
                                      docker pull ${DOCKER_HUB_REPO}:${env.DOCKER_TAG} && \
                                      sudo docker run -d -p 8501:8501 --name ${env.DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${env.DOCKER_TAG}'
