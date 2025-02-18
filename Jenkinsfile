@@ -108,7 +108,7 @@ pipeline {
 			            'sudo systemctl start docker && \
                                      sudo systemctl enable docker && \
                                      docker pull ${DOCKER_HUB_REPO}:${DOCKER_TAG} && \
-                                     sudo docker run -d --name ${DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${DOCKER_TAG}' 	    
+                                     sudo docker run -d -p 8501:8501 --name ${DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${DOCKER_TAG}' 	    
 			    """
                         } catch (Exception e) {
                             error "Docker deployment to EC2 failed: ${e.message}"

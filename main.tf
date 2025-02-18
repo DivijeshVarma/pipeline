@@ -101,8 +101,8 @@ resource "aws_vpc_security_group_ingress_rule" "open_ingress_rule_jen" {
   security_group_id = aws_security_group.open_sg.id
   description       = "Allow HTTP traffic"
   cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 8080
-  to_port           = 8080
+  from_port         = 8501
+  to_port           = 8501
   ip_protocol       = "tcp"
 
   tags = {
