@@ -7,6 +7,7 @@ pipeline {
         NAMESPACE = 'default'
         TERRAFORM_DIR = '.'  // Path to the directory containing your Terraform files
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
+		EC2_INSTANCE_IP = '32.34.54.65'
     }
 
     stages {
@@ -75,34 +76,8 @@ pipeline {
             }
         }
 
-        stage('Run Terraform for EC2 and Docker Setup') {
-            steps {
-                input message: 'Approve Terraform Execution?', ok: 'Deploy'
-                script {
-                    echo 'Running Terraform to launch EC2 instance and set up Docker...'
-
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-id']]) {
-                        dir(TERRAFORM_DIR) {
-                            // Initialize Terraform and apply the configuration
-                            sh 'terraform init'
-                            sh 'terraform apply -auto-approve'  // Apply the Terraform configuration
-
-                            // Fetch the EC2 public IP from Terraform output
-                            def ec2Ip = sh(script: 'terraform output -raw ec2_public_ip', returnStdout: true).trim()
-                            echo "Terraform output ec2_public_ip: ${ec2Ip}"
-
-                            // Store the IP in the environment variable for use in subsequent stages
-                            if (ec2Ip == '') {
-                                error 'Terraform output is empty, no public IP found.'
-                            }
-                            env.EC2_INSTANCE_IP = ec2Ip
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Deploy Docker Images to EC2') {
+        
+		stage('Deploy Docker Images to EC2') {
             steps {
                 input message: 'Approve Docker Deployment to EC2?', ok: 'Deploy'
                 script {
@@ -111,21 +86,25 @@ pipeline {
                     // Using sshagent to securely handle SSH credentials for EC2 instance
                     sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                         try {
-                            // SSH into EC2 instance and deploy the container
-                            sh """
-                                ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} \
-                                    'docker pull ${DOCKER_HUB_REPO}:${env.DOCKER_TAG} && \
-                                     sudo docker run -d -p 8501:8501 --name ${env.DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${env.DOCKER_TAG}'
-                            """
-                        } catch (Exception e) {
-                            error "Docker deployment to EC2 failed: ${e.message}"
-                        }
+                            // Generate a random port for the external (exposed) port, keeping internal port fixed (8501)
+                            def randomPort = (Math.random() * (65535 - 1024) + 1024).toInteger()  // Random port between 1024 and 65535
+                            echo "Assigning random external port: ${randomPort} for the container"
+
+                            // SSH into EC2 instance and deploy the container, mapping the internal port to the random external port
+                           sh """
+                               ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} \
+                                   'docker pull ${DOCKER_HUB_REPO}:${env.DOCKER_TAG} && \
+                                    sudo docker run -d -p ${randomPort}:8501 --name ${env.DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${env.DOCKER_TAG}'
+                           """
+                       } catch (Exception e) {
+                           error "Docker deployment to EC2 failed: ${e.message}"
+                       }
                     }
                 }
             }
         }
-    }
-
+	}		
+        
     post {
         always {
             cleanWs()
@@ -138,4 +117,3 @@ pipeline {
         }
     }
 }
-
