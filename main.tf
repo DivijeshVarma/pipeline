@@ -163,15 +163,15 @@ resource "aws_instance" "web" {
   associate_public_ip_address = true # Automatically associates a public IP address
 
   # Install Jenkins
-  #user_data = <<-EOF
-  #            #!/bin/bash
-  #            sudo yum update -y
-  #            sudo yum install docker -y
-  #            sudo systemctl enable --now docker
-  #            sudo groupadd docker
-  #            sudo usermod -a -G docker ec2-user
-  #            newgrp docker
-  #          EOF
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo yum update -y
+              sudo yum install docker -y
+              sudo systemctl enable --now docker
+              sudo groupadd docker
+              sudo usermod -a -G docker ec2-user
+              newgrp docker
+            EOF
 
   # Adding 10GB of EBS storage
   root_block_device {
