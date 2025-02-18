@@ -7,7 +7,7 @@ pipeline {
         NAMESPACE = 'default'
         TERRAFORM_DIR = '.'  // Path to the directory containing your Terraform files
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
-		EC2_INSTANCE_IP = '32.34.54.65'
+	EC2_INSTANCE_IP = '13.233.95.81'
     }
 
     stages {
