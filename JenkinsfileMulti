@@ -4,7 +4,6 @@ pipeline {
     environment {
         DOCKER_HUB_REPO = 'divijeshhub/pikube'
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub'
-        NAMESPACE = 'default'
         TERRAFORM_DIR = '.'  // Path to the directory containing your Terraform files
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'  // SSH credentials ID in Jenkins
 	EC2_INSTANCE_IP = '13.233.184.208'
@@ -23,7 +22,7 @@ pipeline {
             steps {
                 script {
                     // Dynamically set Docker tag and container name based on the branch name
-                    env.DOCKER_TAG = "${env.BRANCH_NAME}-v1" // Using branch name as part of the Docker tag
+                    env.DOCKER_TAG = "${env.BRANCH_NAME}-v2" // Using branch name as part of the Docker tag
                     env.DEPLOYMENT_NAME = "${env.BRANCH_NAME}-container" // Unique container name per branch
 
                     echo "Deploying Docker container for branch: ${env.BRANCH_NAME}, Tag: ${env.DOCKER_TAG}, Deployment Name: ${env.DEPLOYMENT_NAME}"
