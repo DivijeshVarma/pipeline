@@ -93,7 +93,9 @@ pipeline {
                             // SSH into EC2 instance and deploy the container, mapping the internal port to the random external port
                            sh """
                                ssh -o StrictHostKeyChecking=no ec2-user@${env.EC2_INSTANCE_IP} \
-                                   'docker pull ${DOCKER_HUB_REPO}:${env.DOCKER_TAG} && \
+                                   'docker ps -a --filter "name=${env.DEPLOYMENT_NAME}" --format "{{.ID}}" | xargs -r docker stop && \
+				    docker ps -a --filter "name=${env.DEPLOYMENT_NAME}" --format "{{.ID}}" | xargs -r docker rm && \
+				    docker pull ${DOCKER_HUB_REPO}:${env.DOCKER_TAG} && \
                                     sudo docker run -d -p ${randomPort}:8501 --name ${env.DEPLOYMENT_NAME} ${DOCKER_HUB_REPO}:${env.DOCKER_TAG}'
                            """
                        } catch (Exception e) {
